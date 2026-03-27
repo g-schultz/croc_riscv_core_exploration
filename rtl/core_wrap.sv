@@ -177,4 +177,64 @@ module core_wrap import croc_pkg::*; #() (
     .core_busy_o
   );
 
+  //TODO Instantiate new cv32e40p core
+
+  cv32e40p_top #(
+      .FPU                      ( 0 ),
+      .FPU_ADDMUL_LAT           ( 0 ),
+      .FPU_OTHERS_LAT           ( 0 ),
+      .ZFINX                    ( 0 ),
+      .COREV_PULP               ( 0 ),
+      .COREV_CLUSTER            ( 0 ),
+      .NUM_MHPMCOUNTERS         ( 1 )
+  ) i_cv32e40p (
+      // Clock and reset
+      .rst_ni,
+      .clk_i,
+      .scan_cg_en_i             ( 1'b0 ), //??
+
+      // Special control signals
+      .fetch_enable_i,
+      .pulp_clock_en_i          ( 1'b0         ), //not used if COREV_PULP = 0
+      .core_sleep_o             ( ~core_busy_o ), //??
+
+      // Configuration
+      .boot_addr_i              ( {boot_addr_i[31:1], 1'b0}  ), //is halfword aligned (core doc)
+      .mtvec_addr_i             ( {boot_addr_i[31:2], 2'b00} ), //is 4-byte aligned (RV priv specs)
+      .dm_halt_addr_i           ( DebugHaltAddress           ),
+      .dm_exception_addr_i      ( DebugExceptionAddress      ),
+      .hart_id_i                ( 32'd0                      ),
+
+      // Instruction memory interface (OBI, instr_err_i missing)
+      .instr_req_o,
+      .instr_gnt_i,
+      .instr_rdata_i,
+      .instr_rvalid_i,
+      .instr_addr_o,
+
+      // Data memory interface (OBI, data_err_i missing)
+      .data_req_o,
+      .data_gnt_i,
+      .data_rvalid_i,
+      .data_we_o,
+      .data_be_o,
+      .data_addr_o,
+      .data_wdata_o,
+      .data_rdata_i,
+
+      // Interrupt interface
+      .irq_i                    ( {irqs_i, 8'd0, timer_irq_i, 3'd0, software_irq_i, 3'd0} ),
+      .irq_ack_o                (), 
+      .irq_id_o                 (),
+
+      // Debug interface
+      .debug_req_i,
+      .debug_havereset_o        (),
+      .debug_running_o          (),
+      .debug_halted_o           ()
+  );
+
+
+
+
 endmodule
