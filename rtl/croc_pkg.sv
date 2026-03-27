@@ -36,6 +36,14 @@ package croc_pkg;
   //////////////////////////
   // Core Configuration   //
   //////////////////////////
+  //Select which core is used, and then adjust the corresponding parameters
+  typedef enum bit [2:0] {
+    Cve2,
+    Cv32e40p
+  } sel_core_t;
+  localparam sel_core_t   Sel_core = Cve2;
+
+  ///CVE2 Parameters
   /// Physical Memory Protection enable
   localparam bit          CorePMPEnable = 1'b0;
   /// Core type identifier reported in the SoC info register:

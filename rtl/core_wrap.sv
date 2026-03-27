@@ -80,139 +80,63 @@ module core_wrap import croc_pkg::*; #() (
   output logic        core_busy_o
 );
 
-  // CVE2: debug halt/exception vectors are provided as runtime inputs.
-  // Cores that hardcode these addresses internally do not need these params.
-  // Remove the localparams and connections below when replacing with such a core.
-  // Make sure to check PeriphDebug's start_addr in croc_pkg and adjust if necesary.
-  localparam bit [31:0] DebugAddrOffset       = get_periph_start_addr(PeriphDebug);
-  localparam bit [31:0] DebugHaltAddress      = DebugAddrOffset + dm::HaltAddress[31:0];
-  localparam bit [31:0] DebugExceptionAddress = DebugAddrOffset + dm::ExceptionAddress[31:0];
+generate
+  if (Sel_core == Cve2) begin : gen_cve2
+    // CVE2: debug halt/exception vectors are provided as runtime inputs.
+    // Cores that hardcode these addresses internally do not need these params.
+    // Remove the localparams and connections below when replacing with such a core.
+    // Make sure to check PeriphDebug's start_addr in croc_pkg and adjust if necesary.
+    localparam bit [31:0] DebugAddrOffset       = get_periph_start_addr(PeriphDebug);
+    localparam bit [31:0] DebugHaltAddress      = DebugAddrOffset + dm::HaltAddress[31:0];
+    localparam bit [31:0] DebugExceptionAddress = DebugAddrOffset + dm::ExceptionAddress[31:0];
 
-  // CVE2 ignores the lowest 8 bits of boot_addr internally; mask here to avoid confusion.
-  // You may want to remove this masking when using a core that uses the full boot address.
-  logic [31:0] boot_addr_masked;
-  assign boot_addr_masked = boot_addr_i & 32'hFFFFFF00;
+    // CVE2 ignores the lowest 8 bits of boot_addr internally; mask here to avoid confusion.
+    // You may want to remove this masking when using a core that uses the full boot address.
+    logic [31:0] boot_addr_masked;
+    assign boot_addr_masked = boot_addr_i & 32'hFFFFFF00;
 
-  // CV-X-IF tie-offs: CVE2-specific co-processor extension interface, disabled here.
-  // Remove this block entirely when replacing CVE2 with another core.
-  // If you want to use CV-X-IF, instantiate your accelerator here and connect the x_* signals.
-  cve2_pkg::x_issue_resp_t x_issue_resp;
-  cve2_pkg::x_result_t     x_result;
-  always_comb begin
-    x_issue_resp = '0;
-    x_result     = '0;
-  end
+    // CV-X-IF tie-offs: CVE2-specific co-processor extension interface, disabled here.
+    // Remove this block entirely when replacing CVE2 with another core.
+    // If you want to use CV-X-IF, instantiate your accelerator here and connect the x_* signals.
+    cve2_pkg::x_issue_resp_t x_issue_resp;
+    cve2_pkg::x_result_t     x_result;
+    always_comb begin
+      x_issue_resp = '0;
+      x_result     = '0;
+    end
 
 `ifdef TRACE_EXECUTION
-  cve2_core_tracing #(
+    cve2_core_tracing #(
 `else
-  cve2_core #(
+    cve2_core #(
 `endif
-    .PMPEnable        ( CorePMPEnable       ),
-    .PMPGranularity   ( 0                   ),
-    .PMPNumRegions    ( 4                   ),
-    .MHPMCounterNum   ( 0                   ),
-    .MHPMCounterWidth ( 40                  ),
-    .RV32E            ( 0                   ),
-    .RV32M            ( cve2_pkg::RV32MNone ),
-    .RV32B            ( cve2_pkg::RV32BNone ),
-    .DbgTriggerEn     ( 1'b1                ),
-    .DbgHwBreakNum    ( 1                   ),
-    .XInterface       ( 1'b0                )
-  ) i_core (
-    .clk_i,
-    .rst_ni,
-    .test_en_i        ( test_enable_i    ),
-    .hart_id_i        ( 32'd0            ),
-    .boot_addr_i      ( boot_addr_masked ),
-
-    // Instruction Memory Interface (OBI):
-    .instr_req_o,
-    .instr_gnt_i,
-    .instr_rdata_i,
-    .instr_rvalid_i,
-    .instr_addr_o,
-    .instr_err_i,
-
-    // Data memory interface (OBI):
-    .data_req_o,
-    .data_gnt_i,
-    .data_rvalid_i,
-    .data_we_o,
-    .data_be_o,
-    .data_addr_o,
-    .data_wdata_o,
-    .data_rdata_i,
-    .data_err_i,
-
-    // Core-V Extension Interface (CV-X-IF):
-    .x_issue_valid_o     (),
-    .x_issue_ready_i     ( 1'b1 ),
-    .x_issue_req_o       (),
-    .x_issue_resp_i      ( x_issue_resp ),
-    .x_register_o        (),
-    .x_commit_valid_o    (),
-    .x_commit_o          (),
-    .x_result_valid_i    ( 1'b0 ),
-    .x_result_ready_o    (),
-    .x_result_i          ( x_result ),
-
-    // Interrupts
-    .irq_software_i      ( software_irq_i ),
-    .irq_timer_i         ( timer_irq_i    ),
-    .irq_external_i      ( 1'b0           ),
-    .irq_fast_i          ( irqs_i         ),
-    .irq_nm_i            ( 1'b0           ),
-    .irq_pending_o       (),
-
-    // Debug Interface
-    .debug_req_i,
-    .debug_halted_o      (),
-    .dm_halt_addr_i      ( DebugHaltAddress      ),
-    .dm_exception_addr_i ( DebugExceptionAddress ),
-    .crash_dump_o        (),
-
-    // CPU Control Signals
-    .fetch_enable_i,
-    .core_busy_o
-  );
-
-  //TODO Instantiate new cv32e40p core
-
-  cv32e40p_top #(
-      .FPU                      ( 0 ),
-      .FPU_ADDMUL_LAT           ( 0 ),
-      .FPU_OTHERS_LAT           ( 0 ),
-      .ZFINX                    ( 0 ),
-      .COREV_PULP               ( 0 ),
-      .COREV_CLUSTER            ( 0 ),
-      .NUM_MHPMCOUNTERS         ( 1 )
-  ) i_cv32e40p (
-      // Clock and reset
-      .rst_ni,
+      .PMPEnable        ( CorePMPEnable       ),
+      .PMPGranularity   ( 0                   ),
+      .PMPNumRegions    ( 4                   ),
+      .MHPMCounterNum   ( 0                   ),
+      .MHPMCounterWidth ( 40                  ),
+      .RV32E            ( 0                   ),
+      .RV32M            ( cve2_pkg::RV32MNone ),
+      .RV32B            ( cve2_pkg::RV32BNone ),
+      .DbgTriggerEn     ( 1'b1                ),
+      .DbgHwBreakNum    ( 1                   ),
+      .XInterface       ( 1'b0                )
+    ) i_core (
       .clk_i,
-      .scan_cg_en_i             ( 1'b0 ), //??
+      .rst_ni,
+      .test_en_i        ( test_enable_i    ),
+      .hart_id_i        ( 32'd0            ),
+      .boot_addr_i      ( boot_addr_masked ),
 
-      // Special control signals
-      .fetch_enable_i,
-      .pulp_clock_en_i          ( 1'b0         ), //not used if COREV_PULP = 0
-      .core_sleep_o             ( ~core_busy_o ), //??
-
-      // Configuration
-      .boot_addr_i              ( {boot_addr_i[31:1], 1'b0}  ), //is halfword aligned (core doc)
-      .mtvec_addr_i             ( {boot_addr_i[31:2], 2'b00} ), //is 4-byte aligned (RV priv specs)
-      .dm_halt_addr_i           ( DebugHaltAddress           ),
-      .dm_exception_addr_i      ( DebugExceptionAddress      ),
-      .hart_id_i                ( 32'd0                      ),
-
-      // Instruction memory interface (OBI, instr_err_i missing)
+      // Instruction Memory Interface (OBI):
       .instr_req_o,
       .instr_gnt_i,
       .instr_rdata_i,
       .instr_rvalid_i,
       .instr_addr_o,
+      .instr_err_i,
 
-      // Data memory interface (OBI, data_err_i missing)
+      // Data memory interface (OBI):
       .data_req_o,
       .data_gnt_i,
       .data_rvalid_i,
@@ -221,20 +145,99 @@ module core_wrap import croc_pkg::*; #() (
       .data_addr_o,
       .data_wdata_o,
       .data_rdata_i,
+      .data_err_i,
 
-      // Interrupt interface
-      .irq_i                    ( {irqs_i, 8'd0, timer_irq_i, 3'd0, software_irq_i, 3'd0} ),
-      .irq_ack_o                (), 
-      .irq_id_o                 (),
+      // Core-V Extension Interface (CV-X-IF):
+      .x_issue_valid_o     (),
+      .x_issue_ready_i     ( 1'b1 ),
+      .x_issue_req_o       (),
+      .x_issue_resp_i      ( x_issue_resp ),
+      .x_register_o        (),
+      .x_commit_valid_o    (),
+      .x_commit_o          (),
+      .x_result_valid_i    ( 1'b0 ),
+      .x_result_ready_o    (),
+      .x_result_i          ( x_result ),
 
-      // Debug interface
+      // Interrupts
+      .irq_software_i      ( software_irq_i ),
+      .irq_timer_i         ( timer_irq_i    ),
+      .irq_external_i      ( 1'b0           ),
+      .irq_fast_i          ( irqs_i         ),
+      .irq_nm_i            ( 1'b0           ),
+      .irq_pending_o       (),
+
+      // Debug Interface
       .debug_req_i,
-      .debug_havereset_o        (),
-      .debug_running_o          (),
-      .debug_halted_o           ()
-  );
+      .debug_halted_o      (),
+      .dm_halt_addr_i      ( DebugHaltAddress      ),
+      .dm_exception_addr_i ( DebugExceptionAddress ),
+      .crash_dump_o        (),
 
+      // CPU Control Signals
+      .fetch_enable_i,
+      .core_busy_o
+    );
 
+  end else if (Sel_core == Cv32e40p) begin : gen_cv32e40p
 
+    cv32e40p_top #(
+        .FPU                      ( 0 ),
+        .FPU_ADDMUL_LAT           ( 0 ),
+        .FPU_OTHERS_LAT           ( 0 ),
+        .ZFINX                    ( 0 ),
+        .COREV_PULP               ( 0 ),
+        .COREV_CLUSTER            ( 0 ),
+        .NUM_MHPMCOUNTERS         ( 0 )
+    ) i_cv32e40p (
+        // Clock and reset
+        .rst_ni,
+        .clk_i,
+        .scan_cg_en_i             ( 1'b0 ), //??
+
+        // Special control signals
+        .fetch_enable_i,
+        .pulp_clock_en_i          ( 1'b0         ), //not used if COREV_PULP = 0
+        .core_sleep_o             ( ~core_busy_o ), //??
+
+        // Configuration
+        .boot_addr_i              ( {boot_addr_i[31:1], 1'b0}  ), //is halfword aligned (core doc)
+        .mtvec_addr_i             ( {boot_addr_i[31:2], 2'b00} ), //is 4-byte aligned (RV priv specs)
+        .dm_halt_addr_i           ( DebugHaltAddress           ),
+        .dm_exception_addr_i      ( DebugExceptionAddress      ),
+        .hart_id_i                ( 32'd0                      ),
+
+        // Instruction memory interface (OBI, instr_err_i missing)
+        .instr_req_o,
+        .instr_gnt_i,
+        .instr_rdata_i,
+        .instr_rvalid_i,
+        .instr_addr_o,
+
+        // Data memory interface (OBI, data_err_i missing)
+        .data_req_o,
+        .data_gnt_i,
+        .data_rvalid_i,
+        .data_we_o,
+        .data_be_o,
+        .data_addr_o,
+        .data_wdata_o,
+        .data_rdata_i,
+
+        // Interrupt interface
+        .irq_i                    ( {irqs_i, 8'd0, timer_irq_i, 3'd0, software_irq_i, 3'd0} ),
+        .irq_ack_o                (), 
+        .irq_id_o                 (),
+
+        // Debug interface
+        .debug_req_i,
+        .debug_havereset_o        (),
+        .debug_running_o          (),
+        .debug_halted_o           ()
+    );
+  end else begin : gen_err
+    $error("No core selected! Please select the desired core in croc_pkg.sv")
+  end
+endgenerate
 
 endmodule
