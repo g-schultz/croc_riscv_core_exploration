@@ -41,7 +41,7 @@ package croc_pkg;
     Cve2,
     Cv32e40p
   } sel_core_t;
-  localparam sel_core_t   Sel_core = Cve2;
+  localparam sel_core_t   Sel_core = Cv32e40p;
 
   ///CVE2 Parameters
   /// Physical Memory Protection enable

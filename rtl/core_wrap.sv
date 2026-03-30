@@ -181,6 +181,10 @@ generate
 
   end else if (Sel_core == Cv32e40p) begin : gen_cv32e40p
 
+    localparam bit [31:0] DebugAddrOffset       = get_periph_start_addr(PeriphDebug);
+    localparam bit [31:0] DebugHaltAddress      = DebugAddrOffset + dm::HaltAddress[31:0];
+    localparam bit [31:0] DebugExceptionAddress = DebugAddrOffset + dm::ExceptionAddress[31:0];
+
     cv32e40p_top #(
         .FPU                      ( 0 ),
         .FPU_ADDMUL_LAT           ( 0 ),
@@ -198,7 +202,7 @@ generate
         // Special control signals
         .fetch_enable_i,
         .pulp_clock_en_i          ( 1'b0         ), //not used if COREV_PULP = 0
-        .core_sleep_o             ( ~core_busy_o ), //??
+        .core_sleep_o             ( ~core_busy_o ),
 
         // Configuration
         .boot_addr_i              ( {boot_addr_i[31:1], 1'b0}  ), //is halfword aligned (core doc)
@@ -236,7 +240,7 @@ generate
         .debug_halted_o           ()
     );
   end else begin : gen_err
-    $error("No core selected! Please select the desired core in croc_pkg.sv")
+    $error("The desired core does not exist! Please select a valid core in croc_pkg.sv");
   end
 endgenerate
 
