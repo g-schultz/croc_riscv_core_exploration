@@ -19,6 +19,7 @@ dependencies:
   idma:                 { git: "https://github.com/pulp-platform/idma.git",                 rev: "__deploy__e618e4d__master" } # master with generated files
   cve2:                 { path: "rtl/cve2" } # a vendor package (no Bender.yml), see below 
   riscv:                { git: "https://github.com/openhwgroup/cv32e40p",                   rev: 360d272    } # cv32e40p_v1.8.3
+  fpnew:                { git: "https://github.com/pulp-platform/fpnew.git",                version: 0.8.1  }
 
 
 sources:
