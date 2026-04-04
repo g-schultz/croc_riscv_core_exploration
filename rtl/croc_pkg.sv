@@ -41,14 +41,14 @@ package croc_pkg;
     Cve2,
     Cv32e40p
   } sel_core_t;
-  localparam sel_core_t   Sel_core = Cv32e40p;
+  localparam sel_core_t Sel_core = Cv32e40p;
 
   ///CVE2 Parameters
   /// Physical Memory Protection enable
   localparam bit          CorePMPEnable = 1'b0;
   /// Core type identifier reported in the SoC info register:
   /// 3'b000=CVE2, 3'b001=Ibex, 3'b111=custom, others are reserved
-  localparam int unsigned CoreId        = 0;
+  localparam int unsigned CoreId        = 7;
 
 
   ////////////////////////
