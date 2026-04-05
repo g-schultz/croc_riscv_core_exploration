@@ -71,7 +71,7 @@ build_verilator() {
         --trace-fst \
         --trace-threads 2 \
         --trace-structs \
-        --unroll-count 1 \
+        --unroll-count 32 \
         --unroll-stmts 1 \
         --x-assign fast \
         --x-initial fast \
