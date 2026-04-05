@@ -61,5 +61,10 @@ int main() {
     uint32_t res = isqrt(1234567890UL);
     CHECK_ASSERT(12, res == 0x8940);
 
+    //FPU: add, sub
+    volatile float c = 1.0f , d = 0.5f;
+    CHECK_ASSERT(13, c + d == 1.5f);
+    CHECK_ASSERT(14, c - d == 0.5f);
+
     return 0;
 }
