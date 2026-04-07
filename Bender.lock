@@ -20,6 +20,15 @@ packages:
     source:
       Path: rtl/common_verification
     dependencies: []
+  cv32e40p:
+    revision: 9b1e50b6c6d340f6c90a56d1070c21b54f2a44f7
+    version: null
+    source:
+      Git: https://github.com/g-schultz/cv32e40p.git
+    dependencies:
+    - common_cells
+    - fpnew
+    - tech_cells_generic
   cve2:
     revision: null
     version: null
@@ -66,15 +75,6 @@ packages:
     dependencies:
     - common_cells
     - obi
-  riscv:
-    revision: 360d272898d81806be3377193870dbf83a3ea79f
-    version: null
-    source:
-      Git: https://github.com/openhwgroup/cv32e40p
-    dependencies:
-    - common_cells
-    - fpnew
-    - tech_cells_generic
   riscv-dbg:
     revision: null
     version: null
