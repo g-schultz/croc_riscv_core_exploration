@@ -188,7 +188,11 @@ generate
     logic core_sleep_o;
     assign core_busy_o = ~core_sleep_o;
 
+`ifdef CV32E40P_TRACE_EXECUTION
+    cv32e40p_tb_wrapper #(
+`else
     cv32e40p_top #(
+`endif
         .FPU                      ( 0 ),
         .FPU_ADDMUL_LAT           ( 0 ),
         .FPU_OTHERS_LAT           ( 0 ),
@@ -197,15 +201,13 @@ generate
         .COREV_CLUSTER            ( 0 ),
         .NUM_MHPMCOUNTERS         ( 0 )
     ) i_cv32e40p (
-        // Clock and reset
+        // Clock and Reset
         .rst_ni,
         .clk_i,
-        .scan_cg_en_i             ( 1'b0 ), //??
 
-        // Special control signals
-        .fetch_enable_i,
-        .pulp_clock_en_i          ( 1'b0         ), //not used if COREV_PULP = 0
-        .core_sleep_o,
+        // Special Control Signals
+        .scan_cg_en_i             ( 1'b0 ), 
+        .pulp_clock_en_i          ( 1'b0 ), //not used if COREV_PULP = 0
 
         // Configuration
         .boot_addr_i              ( {boot_addr_i[31:1], 1'b0}  ), //is halfword aligned (core doc)
@@ -214,14 +216,14 @@ generate
         .dm_exception_addr_i      ( DebugExceptionAddress      ),
         .hart_id_i                ( 32'd0                      ),
 
-        // Instruction memory interface (OBI, instr_err_i missing)
+        // Instruction memory interface (OBI)
         .instr_req_o,
         .instr_gnt_i,
         .instr_rdata_i,
         .instr_rvalid_i,
         .instr_addr_o,
 
-        // Data memory interface (OBI, data_err_i missing)
+        // Data memory interface (OBI)
         .data_req_o,
         .data_gnt_i,
         .data_rvalid_i,
@@ -231,16 +233,20 @@ generate
         .data_wdata_o,
         .data_rdata_i,
 
-        // Interrupt interface
+        // Interrupt Interface
         .irq_i                    ( {irqs_i, 8'd0, timer_irq_i, 3'd0, software_irq_i, 3'd0} ),
         .irq_ack_o                (), 
         .irq_id_o                 (),
 
-        // Debug interface
+        // Debug Interface
         .debug_req_i,
         .debug_havereset_o        (),
         .debug_running_o          (),
-        .debug_halted_o           ()
+        .debug_halted_o           (),
+
+        //CPU Control Signals
+        .fetch_enable_i,
+        .core_sleep_o
     );
 
     
