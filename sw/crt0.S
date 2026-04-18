@@ -38,6 +38,49 @@ _start:
   .option norelax
   la      gp, __global_pointer$
   .option pop
+
+// Initialize FP registers
+#ifdef __riscv_float_abi_single
+  // Set FS state to "Initial", enabling FP instructions
+  li t1, 1
+  slli t1, t1, 13
+  csrs mstatus, t1
+
+  // Clear all 32 FP registers
+  fcvt.s.w f0, x0
+  fmv.s f1, f0
+  fmv.s f2, f0
+  fmv.s f3, f0
+  fmv.s f4, f0
+  fmv.s f5, f0
+  fmv.s f6, f0
+  fmv.s f7, f0
+  fmv.s f8, f0
+  fmv.s f9, f0
+  fmv.s f10, f0
+  fmv.s f11, f0
+  fmv.s f12, f0
+  fmv.s f13, f0
+  fmv.s f14, f0
+  fmv.s f15, f0
+  fmv.s f16, f0
+  fmv.s f17, f0
+  fmv.s f18, f0
+  fmv.s f19, f0
+  fmv.s f20, f0
+  fmv.s f21, f0
+  fmv.s f22, f0
+  fmv.s f23, f0
+  fmv.s f24, f0
+  fmv.s f25, f0
+  fmv.s f26, f0
+  fmv.s f27, f0
+  fmv.s f28, f0
+  fmv.s f29, f0
+  fmv.s f30, f0
+  fmv.s f31, f0
+#endif
+
   tail    main
 
 # ==================================================================
