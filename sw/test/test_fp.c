@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include "util.h"
+#include "uart.h"
 #include "print.h"
+#include "util.h"
 
 void matmulNxN(float* matA, float* matB, float* matC, int N)
 {
@@ -78,6 +78,7 @@ float matC[N*N], matC_ref[N*N];
 
 int main(int argc, char *argv[])
 {
+  uart_init();
 
 // #ifdef RANDOM_MEM_STALL
 //     activate_random_stall();
@@ -117,12 +118,13 @@ int main(int argc, char *argv[])
   matmulNxN(matA, matB, matC, N);
 
   for (int i = 0; i < N*N; ++i) {
-    //CHECK_ASSERT(i, matC_ref[i] == matC[i]);
     if (matC_ref[i] != matC[i]) {
       error++;
-      printf("Error at index %d, expected %x, got %x\n", i, (*(int*)&matC_ref[i]), (*(int*)&matC[i]));
+      printf("Error at index %x, expected %x, got %x\n", i, (*(int*)&matC_ref[i]), (*(int*)&matC[i]));
     }
   }
+
+  CHECK_ASSERT(1, error == 0);
 
   return 0;
 }
