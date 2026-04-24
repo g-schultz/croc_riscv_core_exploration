@@ -6,6 +6,15 @@ packages:
       Path: rtl/apb
     dependencies:
     - common_cells
+  axi:
+    revision: a256a3b86394fedf19e361047fccfdd7f6ef83e4
+    version: 0.39.9
+    source:
+      Git: https://github.com/pulp-platform/axi.git
+    dependencies:
+    - common_cells
+    - common_verification
+    - tech_cells_generic
   common_cells:
     revision: null
     version: null
@@ -59,6 +68,12 @@ packages:
     dependencies:
     - common_cells
     - obi
+  neorv32:
+    revision: c7f99da3408756f2e0cf52bf1e0afe87df759b12
+    version: null
+    source:
+      Git: https://github.com/g-schultz/neorv32.git
+    dependencies: []
   obi:
     revision: null
     version: null
