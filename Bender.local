@@ -1,5 +1,5 @@
 overrides:
-  common_verification: { path: "rtl/common_verification" }
+  # common_verification: { path: "rtl/common_verification" }
   tech_cells_generic: { path: "rtl/tech_cells_generic" }
   common_cells: { path: "rtl/common_cells" }
   apb: { path: "rtl/apb" }
