@@ -39,9 +39,10 @@ package croc_pkg;
   //Select which core is used, and then adjust the corresponding parameters
   typedef enum bit [2:0] {
     Cve2,
-    Cv32e40p
+    Cv32e40p,
+    Neorv32
   } sel_core_t;
-  localparam sel_core_t Sel_core = Cv32e40p;
+  localparam sel_core_t Sel_core = Neorv32;
 
   ///CVE2 Parameters
   /// Physical Memory Protection enable

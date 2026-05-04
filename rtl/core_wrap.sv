@@ -249,7 +249,103 @@ generate
         .core_sleep_o
     );
 
+  end else if (Sel_core == Neorv32) begin : gen_neorv32
     
+    localparam bit [31:0] DebugAddrOffset       = get_periph_start_addr(PeriphDebug);
+    localparam bit [31:0] DebugHaltAddress      = DebugAddrOffset + dm::HaltAddress[31:0];
+    localparam bit [31:0] DebugExceptionAddress = DebugAddrOffset + dm::ExceptionAddress[31:0];
+
+
+    neorv32_wrap #(
+      // General
+      .HART_ID             = ( 0                     ), // hardware thread ID
+      .VENDOR_ID           = ( 32'd0                 ), // vendor ID
+      .BOOT_ADDR           = ( boot_addr_i           ), // CPU boot address
+      .DEBUG_PARK_ADDR     = ( DebugHaltAddress      ), // CPU debug mode parking loop entry address
+      .DEBUG_EXC_ADDR      = ( DebugExceptionAddress ), // CPU debug mode exception entry address
+      //  RISC-V ISA Extensions TODO check which ones can be really used
+      .RISCV_ISA_C                  ( 0 ), // : boolean;                        -- compressed extension
+      .RISCV_ISA_E                  ( 0 ), // : boolean;                        -- embedded RF extension
+      .RISCV_ISA_M                  ( 0 ), // : boolean;                        -- mul/div extension
+      .RISCV_ISA_U                  ( 0 ), // : boolean;                        -- user mode extension
+      .RISCV_ISA_Zba                ( 0 ), // : boolean;                        -- shifted-add bit-manipulation extension
+      .RISCV_ISA_Zbb                ( 0 ), // : boolean;                        -- basic bit-manipulation extension
+      .RISCV_ISA_Zbkb               ( 0 ), // : boolean;                        -- bit-manipulation instructions for cryptography
+      .RISCV_ISA_Zbkc               ( 0 ), // : boolean;                        -- carry-less multiplication instructions
+      .RISCV_ISA_Zbkx               ( 0 ), // : boolean;                        -- cryptography crossbar permutation extension
+      .RISCV_ISA_Zbs                ( 0 ), // : boolean;                        -- single-bit bit-manipulation extension
+      .RISCV_ISA_Zcb                ( 0 ), // : boolean;                        -- additional code size reduction instructions
+      .RISCV_ISA_Zfinx              ( 0 ), // : boolean;                        -- 32-bit floating-point extension
+      .RISCV_ISA_Zibi               ( 0 ), // : boolean;                        -- branch with immediate
+      .RISCV_ISA_Zicntr             ( 0 ), // : boolean;                        -- base counters
+      .RISCV_ISA_Zicond             ( 0 ), // : boolean;                        -- integer conditional operations
+      .RISCV_ISA_Zihpm              ( 0 ), // : boolean;                        -- hardware performance monitors
+      .RISCV_ISA_Zimop              ( 0 ), // : boolean;                        -- may-be-operations
+      .RISCV_ISA_Zknd               ( 0 ), // : boolean;                        -- cryptography NIST AES decryption extension
+      .RISCV_ISA_Zkne               ( 0 ), // : boolean;                        -- cryptography NIST AES encryption extension
+      .RISCV_ISA_Zknh               ( 0 ), // : boolean;                        -- cryptography NIST hash extension
+      .RISCV_ISA_Zksed              ( 0 ), // : boolean;                        -- ShangMi hash extension
+      .RISCV_ISA_Zksh               ( 0 ), // : boolean;                        -- ShangMi block cipher extension
+      .RISCV_ISA_Zmmul              ( 0 ), // : boolean;                        -- multiply-only M sub-extension
+      .RISCV_ISA_Sdext              ( 0 ), // : boolean;                        -- external debug mode extension
+      .RISCV_ISA_Sdtrig             ( 0 ), // : boolean;                        -- trigger module extension
+      .RISCV_ISA_Smcntrpmf          ( 0 ), // : boolean;                        -- counter privilege-mode filtering
+      .RISCV_ISA_Smpmp              ( 0 ), // : boolean;                        -- physical memory protection
+      .RISCV_ISA_Xcfu               ( 0 ), // : boolean;                        -- custom (instr.) functions unit
+      //  Tuning Options
+      .CPU_TRACE_EN                 ( 0 ), // : boolean;                        -- enable CPU execution trace generator
+      .CPU_CONSTT_BR_EN             ( 0 ), // : boolean;                        -- constant-time branches
+      .CPU_FAST_MUL_EN              ( 0 ), // : boolean;                        -- use DSPs for M extension's multiplier
+      .CPU_FAST_SHIFT_EN            ( 0 ), // : boolean;                        -- use barrel shifter for shift operations
+      .CPU_RF_ARCH_SEL              ( 0 ), // : natural range 0 to 3;           -- register file implementation style select
+      //  Physical Memory Protection (PMP)
+      .PMP_NUM_REGIONS     ( 0 ), // : natural range 0 to 16;          -- number of regions (0..16)
+      .PMP_MIN_GRANULARITY ( 0 ), // : natural;                        -- minimal region granularity in bytes, has to be a power of 2, min 4 bytes
+      .PMP_TOR_MODE_EN     ( 0 ), // : boolean;                        -- enable TOR mode
+      .PMP_NAP_MODE_EN     ( 0 ), // : boolean;                        -- enable NAPOT/NA4 modes
+      //  Hardware Performance Monitors (HPM)
+      .HPM_NUM_CNTS        ( 0 ), // : natural range 0 to 13;          -- number of implemented HPM counters (0..13)
+      .HPM_CNT_WIDTH       ( 0 ), // : natural range 0 to 64;          -- total size of HPM counters (0..64)
+      //  Trigger Module (TM)
+      .NUM_HW_TRIGGERS     ( 0 ) // : natural range 0 to 16           -- number of hardware triggers
+    ) (
+      // Global control
+      .clk_i,
+      .rst_ni,
+      .test_enable_i,
+
+      // Status
+      .trace_o (),   // execution trace port (enabled when CPU_TRACE_EN = true)
+      .sleep_o (),   // CPU is in sleep mode
+
+      // Interrupts
+      .msi_i ( software_irq_i )     // RISC-V machine software interrupt
+      .mei_i ( 1'b0 )     // RISC-V machine external interrupt
+      .mti_i ( timer_irq_i ),     // RISC-V machine timer interrupt
+      .firq_i ( irqs_i ),     // custom fast interrupts
+
+      // Debug interface
+      .dbi_i ( debug_req_i ),      // RISC-V debug halt request interrupt
+
+      // Instruction memory interface (OBI)
+      .instr_req_o,
+      .instr_gnt_i,
+      .instr_rvalid_i,
+      .instr_addr_o,
+      .instr_rdata_i,
+      .instr_err_i,
+
+      // Data memory interface (OBI)
+      .data_req_o,
+      .data_gnt_i,
+      .data_rvalid_i,
+      .data_we_o,
+      .data_be_o,
+      .data_addr_o,
+      .data_wdata_o,
+      .data_rdata_i,
+      .data_err_i,
+    );
 
   end else begin : gen_err
     $error("The desired core does not exist! Please select a valid core in croc_pkg.sv");
