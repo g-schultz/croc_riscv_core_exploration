@@ -54,6 +54,10 @@ sources:
       # add your design files with modules here
       - rtl/neorv32/neorv32_wrap.sv
       - rtl/neorv32/xbus_to_obi.sv
+      - rtl/neorv32/neorv32_flatten_pkg.vhd
+      - rtl/neorv32/neorv32_bus_gateway_wrap.vhd
+      - rtl/neorv32/neorv32_cpu_wrap.vhd
+      - rtl/neorv32/neorv32_xbus_wrap.vhd
       # Level 3
       - rtl/croc_soc.sv
 
