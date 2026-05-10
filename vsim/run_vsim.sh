@@ -165,6 +165,7 @@ run_vsim() {
     run_cmd "${VSIM} \
         +binary=$1 \
         -c \
+        -L neorv32 \
         tb_croc_soc \
         -t 1ns \
         -suppress vsim-3009 \
@@ -178,6 +179,7 @@ run_vsim_gui() {
     run_cmd "${VSIM} \
         +binary=$1 \
         -gui \
+        -L neorv32 \
         tb_croc_soc \
         -t 1ns \
         -voptargs=+acc \
