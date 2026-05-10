@@ -258,11 +258,11 @@ generate
 
     neorv32_wrap #(
       // General
-      .HART_ID             = ( 0                     ), // hardware thread ID
-      .VENDOR_ID           = ( 32'd0                 ), // vendor ID
-      .BOOT_ADDR           = ( boot_addr_i           ), // CPU boot address
-      .DEBUG_PARK_ADDR     = ( DebugHaltAddress      ), // CPU debug mode parking loop entry address
-      .DEBUG_EXC_ADDR      = ( DebugExceptionAddress ), // CPU debug mode exception entry address
+      .HART_ID         ( 0                     ), // hardware thread ID
+      .VENDOR_ID       ( 32'd0                 ), // vendor ID
+      .BOOT_ADDR       ( BootromAddr           ), // CPU boot address
+      .DEBUG_PARK_ADDR ( DebugHaltAddress      ), // CPU debug mode parking loop entry address
+      .DEBUG_EXC_ADDR  ( DebugExceptionAddress ), // CPU debug mode exception entry address
       //  RISC-V ISA Extensions TODO check which ones can be really used
       .RISCV_ISA_C                  ( 0 ), // : boolean;                        -- compressed extension
       .RISCV_ISA_E                  ( 0 ), // : boolean;                        -- embedded RF extension
@@ -308,21 +308,21 @@ generate
       .HPM_CNT_WIDTH       ( 0 ), // : natural range 0 to 64;          -- total size of HPM counters (0..64)
       //  Trigger Module (TM)
       .NUM_HW_TRIGGERS     ( 0 ) // : natural range 0 to 16           -- number of hardware triggers
-    ) (
+    ) i_neorv32_wrap (
       // Global control
       .clk_i,
       .rst_ni,
       .test_enable_i,
 
       // Status
-      .trace_o (),   // execution trace port (enabled when CPU_TRACE_EN = true)
+      // .trace_o (),   // execution trace port (enabled when CPU_TRACE_EN = true)
       .sleep_o (),   // CPU is in sleep mode
 
       // Interrupts
-      .msi_i ( software_irq_i )     // RISC-V machine software interrupt
-      .mei_i ( 1'b0 )     // RISC-V machine external interrupt
-      .mti_i ( timer_irq_i ),     // RISC-V machine timer interrupt
-      .firq_i ( irqs_i ),     // custom fast interrupts
+      .msi_i ( software_irq_i ),     // RISC-V machine software interrupt
+      .mei_i ( 1'b0           ),     // RISC-V machine external interrupt
+      .mti_i ( timer_irq_i    ),     // RISC-V machine timer interrupt
+      .firq_i ( irqs_i        ),     // custom fast interrupts
 
       // Debug interface
       .dbi_i ( debug_req_i ),      // RISC-V debug halt request interrupt
@@ -344,7 +344,7 @@ generate
       .data_addr_o,
       .data_wdata_o,
       .data_rdata_i,
-      .data_err_i,
+      .data_err_i
     );
 
   end else begin : gen_err

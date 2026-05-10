@@ -1,6 +1,6 @@
 //TODO: copyright, license
 
-module neorv32_wrap #(
+module neorv32_wrap import croc_pkg::*; #(
   // General
   parameter int unsigned HART_ID             = 0,     // : natural range 0 to 1;           -- hardware thread ID
   parameter logic [31:0] VENDOR_ID           = 32'd0, // : std_ulogic_vector(31 downto 0); -- vendor ID
@@ -56,22 +56,22 @@ module neorv32_wrap #(
   parameter int unsigned NUM_HW_TRIGGERS     = 0 // : natural range 0 to 16           -- number of hardware triggers
 ) (
   // Global control
-  input logic clk_i,
-  input logic rst_ni,
-  input logic test_enable_i,
+  input  logic clk_i,
+  input  logic rst_ni,
+  input  logic test_enable_i,
 
   // Status
-  output trace_port_t trace_o,   // execution trace port (enabled when CPU_TRACE_EN = true)
+  // output trace_port_t trace_o,   // execution trace port (enabled when CPU_TRACE_EN = true)
   output logic        sleep_o,   // CPU is in sleep mode
 
   // Interrupts
-  input logic         msi_i      // RISC-V machine software interrupt
-  input logic         mei_i      // RISC-V machine external interrupt
-  input logic         mti_i      // RISC-V machine timer interrupt
-  input logic [15:0 ] firq_i     // custom fast interrupts
+  input  logic         msi_i,      // RISC-V machine software interrupt
+  input  logic         mei_i,      // RISC-V machine external interrupt
+  input  logic         mti_i,      // RISC-V machine timer interrupt
+  input  logic [15:0 ] firq_i,     // custom fast interrupts
 
   // Debug interface
-  input logic         dbi_i      // RISC-V debug halt request interrupt
+  input  logic        dbi_i,      // RISC-V debug halt request interrupt
 
   // Instruction memory interface (OBI)
   output logic        instr_req_o,
@@ -90,16 +90,46 @@ module neorv32_wrap #(
   output logic [31:0] data_addr_o,
   output logic [31:0] data_wdata_o,
   input  logic [31:0] data_rdata_i,
-  input  logic        data_err_i,
+  input  logic        data_err_i
 );
 
-bus_req_t instr_bus_req;
-bus_rsp_t instr_bus_rsp;
+// typedef struct packed {
+//   logic [4:0]  meta;  // access meta data: core_ID[2], debug[1], priv[1], instr/data[1]
+//   logic [31:0] addr;  // access address
+//   logic [31:0] data;  // write data
+//   logic [3:0]  ben;   // byte enable
+//   logic        stb;   // request strobe, single-shot
+//   logic        rw;    // 0 = read, 1 = write
+//   logic        amo;   // set if atomic memory operation
+//   logic [3:0]  amoop; // type of atomic memory operation
+//   logic        burst; // set if part of burst access
+//   logic        lock;  // set if exclusive access request
+//   // out-of-band signals
+//   logic        fence; // set if fence(.i) operation, single-shot
+// } bus_req_t;
 
-bus_req_t data_bus_req;
-bus_rsp_t data_bus_rsp;
+// typedef struct packed {
+//   logic        ack;  // set if access acknowledge, single-shot
+//   logic        err;  // set if access error, valid if ack = 1
+//   logic [31:0] data; // read data, valid if ack = 1
+// } bus_rsp_t;
 
-neorv32_cpu #(
+logic [82:0] instr_bus_req;
+logic [33:0] instr_bus_rsp;
+
+logic [82:0] data_bus_req;
+logic [33:0] data_bus_rsp;
+
+logic [82:0] data_xbus_req;
+logic [33:0] data_xbus_rsp;
+
+logic [82:0] instr_xbus_req;
+logic [33:0] instr_xbus_rsp;
+
+logic     instr_xbus_terminate;
+logic     data_xbus_terminate;
+
+neorv32_cpu_wrap #(
   // General
   .HART_ID             ( HART_ID         ), // hardware thread ID
   .VENDOR_ID           ( VENDOR_ID       ), // vendor ID
@@ -161,10 +191,10 @@ neorv32_cpu #(
 ) i_neorv32_cpu (
   //global control
   .clk_i,   // global clock, rising edge
-  .rstn_i,  // global reset, low-active, async
+  .rstn_i (rst_ni),  // global reset, low-active, async
 
   //status
-  .trace_o, // execution trace port (enabled when CPU_TRACE_EN = true)
+  .trace_o (), // execution trace port (enabled when CPU_TRACE_EN = true)
   .sleep_o, // CPU is in sleep mode
 
   //interrupts
@@ -175,23 +205,15 @@ neorv32_cpu #(
   .dbi_i,  // RISC-V debug halt request interrupt
 
   // instruction bus interface
-  .ibus_req_o ( instr_bus_req ), // request bus
-  .ibus_rsp_i ( instr_bus_rsp ), // response bus
+  .ibus_req_flat_o ( instr_bus_req ), // request bus
+  .ibus_rsp_flat_i ( instr_bus_rsp ), // response bus
 
   // data bus interface
-  .dbus_req_o ( data_bus_req ), // request bus
-  .dbus_rsp_i ( data_bus_rsp )  // response bus
+  .dbus_req_flat_o ( data_bus_req ), // request bus
+  .dbus_rsp_flat_i ( data_bus_rsp )  // response bus
 );
 
-xbus_req_t instr_xbus_req;
-xbus_rsp_t instr_xbus_rsp;
-logic      instr_xbus_terminate;
-
-xbus_req_t data_xbus_req;
-xbus_rsp_t data_xbus_rsp;
-logic      data_xbus_terminate;
-
-neorv32_bus_gateway #(
+neorv32_bus_gateway_wrap #(
   .TMO_INT ( 0     ), // int unsigned // internal bus timeout cycles (0 = timeout disabled)
   .TMO_EXT ( 0     ), // int unsigned // external bus timeout cycles (0 = timeout disabled)
   // port A
@@ -207,29 +229,29 @@ neorv32_bus_gateway #(
   .C_BASE  ( 32'd0 ), // logic [31:0]
   .C_SIZE  ( 0     ), // int unsigned
   // port X (the void)
-  .X_EN    ( 1     ), // bit
+  .X_EN    ( 1     ) // bit
 ) i_data_bus_gateway (
   // global control
-  .clk_i, // logic;      // global clock, rising edge
-  .rstn_i, // logic;      // global reset, low-active, async
+  .clk_i,  // logic;      // global clock, rising edge
+  .rstn_i ( rst_ni ), // logic;      // global reset, low-active, async
   .term_o ( data_xbus_terminate ), // logic;      // terminate current bus access
 
   // host port
-  .req_i   ( data_bus_req ), // bus_req_t;  // host request
-  .rsp_o   ( data_bus_rsp ), // bus_rsp_t;  // host response
+  .host_req_flat_i   ( data_bus_req ), // bus_req_t;  // host request
+  .host_rsp_flat_o   ( data_bus_rsp ), // bus_rsp_t;  // host response
 
   // section ports
-  .a_req_o (), // bus_req_t;
-  .a_rsp_i (), // bus_rsp_t;
-  .b_req_o (), // bus_req_t;
-  .b_rsp_i (), // bus_rsp_t;
-  .c_req_o (), // bus_req_t;
-  .c_rsp_i (), // bus_rsp_t;
-  .x_req_o ( data_xbus_req ), // bus_req_t;
-  .x_rsp_i ( data_xbus_rsp ), // bus_rsp_t
+  .a_req_flat_o (), // bus_req_t;
+  .a_rsp_flat_i (), // bus_rsp_t;
+  .b_req_flat_o (), // bus_req_t;
+  .b_rsp_flat_i (), // bus_rsp_t;
+  .c_req_flat_o (), // bus_req_t;
+  .c_rsp_flat_i (), // bus_rsp_t;
+  .x_req_flat_o ( data_xbus_req ), // bus_req_t;
+  .x_rsp_flat_i ( data_xbus_rsp ) // bus_rsp_t
 );
 
-neorv32_bus_gateway #(
+neorv32_bus_gateway_wrap #(
   .TMO_INT ( 0     ), // int unsigned // internal bus timeout cycles (0 = timeout disabled)
   .TMO_EXT ( 0     ), // int unsigned // external bus timeout cycles (0 = timeout disabled)
   // port A
@@ -245,26 +267,26 @@ neorv32_bus_gateway #(
   .C_BASE  ( 32'd0 ), // logic [31:0]
   .C_SIZE  ( 0     ), // int unsigned
   // port X (the void)
-  .X_EN    ( 1     ), // bit
+  .X_EN    ( 1     ) // bit
 ) i_instr_bus_gateway (
   // global control
   .clk_i, // logic;      // global clock, rising edge
-  .rstn_i, // logic;      // global reset, low-active, async
+  .rstn_i (rst_ni ), // logic;      // global reset, low-active, async
   .term_o ( instr_xbus_terminate ), // logic;      // terminate current bus access
 
   // host port
-  .req_i   ( instr_bus_req ), // bus_req_t;  // host request
-  .rsp_o   ( instr_bus_rsp ), // bus_rsp_t;  // host response
+  .host_req_flat_i   ( instr_bus_req ), // bus_req_t;  // host request
+  .host_rsp_flat_o   ( instr_bus_rsp ), // bus_rsp_t;  // host response
 
   // section ports
-  .a_req_o (), // bus_req_t;
-  .a_rsp_i (), // bus_rsp_t;
-  .b_req_o (), // bus_req_t;
-  .b_rsp_i (), // bus_rsp_t;
-  .c_req_o (), // bus_req_t;
-  .c_rsp_i (), // bus_rsp_t;
-  .x_req_o ( instr_xbus_req ), // bus_req_t;
-  .x_rsp_i ( instr_xbus_rsp ), // bus_rsp_t
+  .a_req_flat_o (), // bus_req_t;
+  .a_rsp_flat_i (), // bus_rsp_t;
+  .b_req_flat_o (), // bus_req_t;
+  .b_rsp_flat_i (), // bus_rsp_t;
+  .c_req_flat_o (), // bus_req_t;
+  .c_rsp_flat_i (), // bus_rsp_t;
+  .x_req_flat_o ( instr_xbus_req ), // bus_req_t;
+  .x_rsp_flat_i ( instr_xbus_rsp ) // bus_rsp_t
 );
 
 logic [31:0] data_xbus_adr;
@@ -291,14 +313,14 @@ logic        instr_xbus_cyc;
 logic        instr_xbus_ack;             
 logic        instr_xbus_err;   
 
-neorv32_xbus #(
-  .REGSAGE_EN ( 0 ) //TODO add to module parameters?
+neorv32_xbus_wrap #(
+  .REGSTAGE_EN ( 0 ) //TODO add to module parameters?
 ) i_neorv32_data_xbus (
   .clk_i,         // global clock line
-  .rstn_i,        // global reset line, low-active
+  .rstn_i ( rst_ni ),        // global reset line, low-active
   .bus_term_i ( data_xbus_terminate ), // : in  std_ulogic;                     -- terminate current bus access
-  .bus_req_i  ( data_xbus_req   ), // : in  bus_req_t;                      -- bus request
-  .bus_rsp_o  ( data_xbus_rsp   ), // : out bus_rsp_t;                      -- bus response
+  .bus_req_flat_i  ( data_xbus_req   ), // : in  bus_req_t;                      -- bus request
+  .bus_rsp_flat_o  ( data_xbus_rsp   ), // : out bus_rsp_t;                      -- bus response
   .xbus_adr_o ( data_xbus_adr   ), // : out std_ulogic_vector(31 downto 0); -- address
   .xbus_dat_o ( data_xbus_dat_o ), // : out std_ulogic_vector(31 downto 0); -- write data
   .xbus_cti_o ( data_xbus_cti   ), // : out std_ulogic_vector(2 downto 0);  -- cycle type
@@ -309,28 +331,28 @@ neorv32_xbus #(
   .xbus_cyc_o ( data_xbus_cyc   ), // : out std_ulogic;                     -- valid cycle
   .xbus_dat_i ( data_xbus_dat_i ), // : in  std_ulogic_vector(31 downto 0); -- read data
   .xbus_ack_i ( data_xbus_ack   ), // : in  std_ulogic;                     -- transfer acknowledge
-  .xbus_err_i ( data_xbus_err   ), // : in  std_ulogic                      -- transfer error
+  .xbus_err_i ( data_xbus_err   ) // : in  std_ulogic                      -- transfer error
 );
 
-neorv32_xbus #(
-  .REGSAGE_EN ( 0 ) //TODO add to module parameters?
+neorv32_xbus_wrap #(
+  .REGSTAGE_EN ( 0 ) //TODO add to module parameters?
 ) i_neorv32_instr_xbus (
   .clk_i,         // global clock line
-  .rstn_i,        // global reset line, low-active
+  .rstn_i (rst_ni ),        // global reset line, low-active
   .bus_term_i ( instr_xbus_terminate ), // : in  std_ulogic;                     -- terminate current bus access
-  .bus_req_i  ( instr_xbus_req   ), // : in  bus_req_t;                      -- bus request
-  .bus_rsp_o  ( instr_xbus_rsp   ), // : out bus_rsp_t;                      -- bus response
-  .xbus_adr_o ( instr_xbus_adr   ), // : out std_ulogic_vector(31 downto 0); -- address
-  .xbus_dat_o ( instr_xbus_dat_o ), // : out std_ulogic_vector(31 downto 0); -- write data
-  .xbus_cti_o ( instr_xbus_cti   ), // : out std_ulogic_vector(2 downto 0);  -- cycle type
-  .xbus_tag_o ( instr_xbus_tag   ), // : out std_ulogic_vector(2 downto 0);  -- access tag
-  .xbus_we_o  ( instr_xbus_we    ), // : out std_ulogic;                     -- read/write
-  .xbus_sel_o ( instr_xbus_sel   ), // : out std_ulogic_vector(3 downto 0);  -- byte enable
-  .xbus_stb_o ( instr_xbus_stb   ), // : out std_ulogic;                     -- strobe
-  .xbus_cyc_o ( instr_xbus_cyc   ), // : out std_ulogic;                     -- valid cycle
-  .xbus_dat_i ( instr_xbus_dat_i ), // : in  std_ulogic_vector(31 downto 0); -- read data
-  .xbus_ack_i ( instr_xbus_ack   ), // : in  std_ulogic;                     -- transfer acknowledge
-  .xbus_err_i ( instr_xbus_err   ), // : in  std_ulogic                      -- transfer error
+  .bus_req_flat_i  ( instr_xbus_req       ), // : in  bus_req_t;                      -- bus request
+  .bus_rsp_flat_o  ( instr_xbus_rsp       ), // : out bus_rsp_t;                      -- bus response
+  .xbus_adr_o ( instr_xbus_adr       ), // : out std_ulogic_vector(31 downto 0); -- address
+  .xbus_dat_o ( instr_xbus_dat_o     ), // : out std_ulogic_vector(31 downto 0); -- write data
+  .xbus_cti_o ( instr_xbus_cti       ), // : out std_ulogic_vector(2 downto 0);  -- cycle type
+  .xbus_tag_o ( instr_xbus_tag       ), // : out std_ulogic_vector(2 downto 0);  -- access tag
+  .xbus_we_o  ( instr_xbus_we        ), // : out std_ulogic;                     -- read/write
+  .xbus_sel_o ( instr_xbus_sel       ), // : out std_ulogic_vector(3 downto 0);  -- byte enable
+  .xbus_stb_o ( instr_xbus_stb       ), // : out std_ulogic;                     -- strobe
+  .xbus_cyc_o ( instr_xbus_cyc       ), // : out std_ulogic;                     -- valid cycle
+  .xbus_dat_i ( instr_xbus_dat_i     ), // : in  std_ulogic_vector(31 downto 0); -- read data
+  .xbus_ack_i ( instr_xbus_ack       ), // : in  std_ulogic;                     -- transfer acknowledge
+  .xbus_err_i ( instr_xbus_err       ) // : in  std_ulogic                      -- transfer error
 );
 
 mgr_obi_req_t instr_req;
@@ -344,16 +366,16 @@ xbus_to_obi #() i_data_xbus_to_obi (
   .test_i ( test_enable_i ),
 
   // XBUS device interface
-  .xbus_adr_i ( data_xbus_adr ),
+  .xbus_adr_i ( data_xbus_adr   ),
   .xbus_dat_i ( data_xbus_dat_o ),
-  .xbus_cti_i ( data_xbus_cti ),
-  .xbus_tag_i ( data_xbus_tag ),
-  .xbus_we_i  ( data_xbus_we  ),
-  .xbus_sel_i ( data_xbus_sel ),
-  .xbus_stb_i ( data_xbus_stb ),
-  .xbus_dat_o ( data_xbus_dat_i),
-  .xbus_ack_o ( data_xbus_ack ),
-  .xbus_err_o ( data_xbus_err ),
+  .xbus_cti_i ( data_xbus_cti   ),
+  .xbus_tag_i ( data_xbus_tag   ),
+  .xbus_we_i  ( data_xbus_we    ),
+  .xbus_sel_i ( data_xbus_sel   ),
+  .xbus_stb_i ( data_xbus_stb   ),
+  .xbus_dat_o ( data_xbus_dat_i ),
+  .xbus_ack_o ( data_xbus_ack   ),
+  .xbus_err_o ( data_xbus_err   ),
 
   // OBI device interface
   .obi_req_o (data_req),
@@ -366,31 +388,31 @@ xbus_to_obi #() i_instr_xbus_to_obi (
   .test_i ( test_enable_i ),
 
   // XBUS device interface
-  .xbus_adr_i ( instr_xbus_adr ),
+  .xbus_adr_i ( instr_xbus_adr   ),
   .xbus_dat_i ( instr_xbus_dat_o ),
-  .xbus_cti_i ( instr_xbus_cti ),
-  .xbus_tag_i ( instr_xbus_tag ),
-  .xbus_we_i  ( instr_xbus_we  ),
-  .xbus_sel_i ( instr_xbus_sel ),
-  .xbus_stb_i ( instr_xbus_stb ),
-  .xbus_dat_o ( instr_xbus_dat_i),
-  .xbus_ack_o ( instr_xbus_ack ),
-  .xbus_err_o ( instr_xbus_err ),
+  .xbus_cti_i ( instr_xbus_cti   ),
+  .xbus_tag_i ( instr_xbus_tag   ),
+  .xbus_we_i  ( instr_xbus_we    ),
+  .xbus_sel_i ( instr_xbus_sel   ),
+  .xbus_stb_i ( instr_xbus_stb   ),
+  .xbus_dat_o ( instr_xbus_dat_i ),
+  .xbus_ack_o ( instr_xbus_ack   ),
+  .xbus_err_o ( instr_xbus_err   ),
 
   // OBI device interface
-  .obi_req_o (instr_req),
-  .obi_rsp_i (instr_rsp)
+  .obi_req_o ( instr_req ),
+  .obi_rsp_i ( instr_rsp )
 );
 
-assign data_req_o    = data_req.req;
-assign data_gnt_i    = data_rsp.gnt;
-assign data_rvalid_i = data_rsp.rvalid;
-assign data_we_o     = data_req.a.we;
-assign data_be_o     = data_req.a.be;
-assign data_addr_o   = data_req.a.addr;
-assign data_wdata_o  = data_req.a.wdata;
-assign data_rdata_i  = data_rsp.r.rdata;
-assign data_err_i    = data_rsp.r.err;
+assign data_req_o     = data_req.req;
+assign data_gnt_i     = data_rsp.gnt;
+assign data_rvalid_i  = data_rsp.rvalid;
+assign data_we_o      = data_req.a.we;
+assign data_be_o      = data_req.a.be;
+assign data_addr_o    = data_req.a.addr;
+assign data_wdata_o   = data_req.a.wdata;
+assign data_rdata_i   = data_rsp.r.rdata;
+assign data_err_i     = data_rsp.r.err;
 
 assign instr_req_o    = instr_req.req;
 assign instr_gnt_i    = instr_rsp.gnt;

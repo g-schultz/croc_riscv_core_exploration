@@ -1,6 +1,9 @@
 //TODO: copyright, license
 
-module xbus_to_obi #() (
+`include "apb/typedef.svh"
+`include "axi/typedef.svh"
+
+module xbus_to_obi import croc_pkg::*; #() (
   input logic rst_ni,
   input logic clk_i,
   input logic test_i,
@@ -19,10 +22,15 @@ module xbus_to_obi #() (
 
   // OBI device interface
   output mgr_obi_req_t obi_req_o,
-  input  mgr_obi_rsp_t obi_rsp_i,
+  input  mgr_obi_rsp_t obi_rsp_i
 );
 
 
+  typedef logic [31:0]   addr_t;
+  typedef logic [31:0]   data_t;
+  typedef logic [0:0]    id_t;
+  typedef logic [3:0]    strb_t;
+  typedef logic [0:0]    user_t;
 
 `AXI_TYPEDEF_AW_CHAN_T(axi_aw_chan_t, addr_t, id_t, user_t)
 `AXI_TYPEDEF_W_CHAN_T(axi_w_chan_t, data_t, strb_t, user_t)
@@ -32,8 +40,41 @@ module xbus_to_obi #() (
 `AXI_TYPEDEF_REQ_T(axi_req_t, axi_aw_chan_t, axi_w_chan_t, axi_ar_chan_t)
 `AXI_TYPEDEF_RESP_T(axi_resp_t, axi_b_chan_t, axi_r_chan_t)
 
-axi_req_t axi_req;
-axi_resp_t axi_resp;
+  axi_req_t axi_req;
+  axi_resp_t axi_resp;
+
+  assign axi_req.aw.id     = 1'b0; 
+  assign axi_req.aw.lock   = 1'b0; 
+  assign axi_req.aw.qos    = 4'd0; 
+  assign axi_req.aw.region = 4'd0; 
+  assign axi_req.aw.atop   = 6'd0; 
+  assign axi_req.aw.user   = 1'b0; // no default value in spec
+  assign axi_req.w.user    = 1'b0; // no default value in spec
+  assign axi_req.ar.id     = 1'b0;
+  assign axi_req.ar.lock   = 1'b0;
+  assign axi_req.ar.qos    = 4'd0;
+  assign axi_req.ar.region = 4'd0;
+  assign axi_req.ar.user   = 1'b0; // no default value in spec
+
+`AXI_LITE_TYPEDEF_AW_CHAN_T(axi_lite_aw_chan_t, addr_t)
+`AXI_LITE_TYPEDEF_W_CHAN_T(axi_lite_w_chan_t, data_t, strb_t)
+`AXI_LITE_TYPEDEF_B_CHAN_T(axi_lite_b_chan_t)
+`AXI_LITE_TYPEDEF_AR_CHAN_T(axi_lite_ar_chan_t, addr_t)
+`AXI_LITE_TYPEDEF_R_CHAN_T(axi_lite_r_chan_t, data_t)
+`AXI_LITE_TYPEDEF_REQ_T(axi_lite_req_t, axi_lite_aw_chan_t, axi_lite_w_chan_t, axi_lite_ar_chan_t)
+`AXI_LITE_TYPEDEF_RESP_T(axi_lite_resp_t, axi_lite_b_chan_t, axi_lite_r_chan_t)
+
+  axi_lite_req_t  axi_lite_req;
+  axi_lite_resp_t axi_lite_resp;
+
+`APB_TYPEDEF_REQ_T(apb_req_t, addr_t, data_t, strb_t)
+`APB_TYPEDEF_RESP_T (apb_resp_t, data_t)
+
+  apb_req_t apb_req;
+  apb_resp_t apb_resp;
+
+  // AXI lite to APB bridge should be transparent
+  localparam addr_map_rule_t addr_map_lite2apb ='{idx: 1'b0, start_addr: 32'h0000_0000, end_addr: 32'hffff_ffff};
 
 xbus2axi4_bridge #(
   .BURST_EN ( 1'b0 ),
@@ -86,26 +127,15 @@ xbus2axi4_bridge #(
   // AXI4 host write response channel
   .m_axi_bresp   ( axi_resp.b.resp   ),
   .m_axi_bvalid  ( axi_resp.b_valid  ),
-  .m_axi_bready  ( axi_req.b_ready   ),
+  .m_axi_bready  ( axi_req.b_ready   )
 );
 
-
-`AXI_LITE_TYPEDEF_AW_CHAN_T(axi_lite_aw_chan_t, addr_t)
-`AXI_LITE_TYPEDEF_W_CHAN_T(axi_lite_w_chan_t, data_t, strb_t)
-`AXI_LITE_TYPEDEF_B_CHAN_T(axi_lite_b_chan_t)
-`AXI_LITE_TYPEDEF_AR_CHAN_T(axi_lite_ar_chan_t, addr_t)
-`AXI_LITE_TYPEDEF_R_CHAN_T(axi_lite_r_chan_t, data_t)
-`AXI_LITE_TYPEDEF_REQ_T(axi_lite_req_t, axi_lite_aw_chan_t, w_chan_t, axi_lite_ar_chan_t)
-`AXI_LITE_TYPEDEF_RESP_T(axi_lite_resp_t, axi_lite_b_chan_t, axi_lite_r_chan_t)
-
-axi_lite_req_t axi_lite_req;
-axi_lite_resp_t axi_lite_resp;
 
 axi_to_axi_lite #(
   .AxiAddrWidth    ( 32'd32 ),
   .AxiDataWidth    ( 32'd32 ),
   .AxiIdWidth      ( 32'd1 ),
-  .AxiUserWidth    ( 32'd0 ),
+  .AxiUserWidth    ( 32'd1 ),
   .AxiMaxWriteTxns ( 32'd1 ),
   .AxiMaxReadTxns  ( 32'd1 ),
   .FullBW          ( 0 ),
@@ -126,17 +156,6 @@ axi_to_axi_lite #(
   .mst_resp_i ( axi_lite_resp )
 );
 
-
-`APB_TYPEDEF_REQ_T(apb_req_t, addr_t, data_t, strb_t)
-`APB_TYPEDEF_RESP_T ( apb_resp_t, data_t )
-
-apb_req_t apb_req;
-apb_rsp_t apb_resp;
-
-// AXI lite to APB bridge should be transparent
-localparam addr_map_rule_t addr_map_lite2apb = '{
-  '{idx: 1'b1, start_addr: 32'h0000_0000, end_addr: 32'hffff_ffff}
-};
 
 axi_lite_to_apb #(
   .NoApbSlaves      ( 32'd1           ), // Number of connected APB slaves
@@ -165,7 +184,7 @@ axi_lite_to_apb #(
 
 apb_to_obi #(
   // The configuration of the manager port (output port)
-  .ObiCfg    ( obi_pkg::MgrObiCfg ),
+  .ObiCfg    ( MgrObiCfg ),
   // The APB request/response struct for the subordinate port (input port)
   .apb_req_t ( apb_req_t          ),
   .apb_rsp_t ( apb_resp_t         ),
