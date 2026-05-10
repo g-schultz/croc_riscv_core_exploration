@@ -6,3 +6,4 @@ modelsim.ini
 *.fst
 *.log
 reports/
+neorv32
