@@ -15,7 +15,7 @@ entity neorv32_xbus_wrap is
     clk_i           : in  std_ulogic;                     -- global clock line
     rstn_i          : in  std_ulogic;                     -- global reset line, low-active
     bus_term_i      : in  std_ulogic;                     -- terminate current bus access
-    bus_req_flat_i  : in  std_ulogic_vector(82 downto 0); -- bus request
+    bus_req_flat_i  : in  std_ulogic_vector(81 downto 0); -- bus request
     bus_rsp_flat_o  : out std_ulogic_vector(33 downto 0); -- bus response
     xbus_adr_o      : out std_ulogic_vector(31 downto 0); -- address
     xbus_dat_i      : in  std_ulogic_vector(31 downto 0); -- read data

@@ -19,7 +19,7 @@ dependencies:
   idma:                 { git: "https://github.com/pulp-platform/idma.git",                 rev: "__deploy__e618e4d__master" } # master with generated files
   cve2:                 { path: "rtl/cve2" } # a vendor package (no Bender.yml), see below 
   cv32e40p:             { git: "https://github.com/g-schultz/cv32e40p.git",                 rev: 9b1e50b    } # cv32e40p_v1.8.3
-  neorv32:              { git: "https://github.com/g-schultz/neorv32.git",                  rev: 20008a4    } # v1.12.9
+  neorv32:              { git: "https://github.com/g-schultz/neorv32.git",                  rev: 20008a4    } # v1.13
   axi:                  { git: "https://github.com/pulp-platform/axi.git",                  version: 0.39.9 } # axi to apb
 
 sources:

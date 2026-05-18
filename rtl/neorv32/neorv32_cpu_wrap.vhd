@@ -26,6 +26,7 @@ entity neorv32_cpu_wrap is
     RISCV_ISA_Zalrsc    : boolean;                        -- atomic reservation-set operations extension
     RISCV_ISA_Zba       : boolean;                        -- shifted-add bit-manipulation extension
     RISCV_ISA_Zbb       : boolean;                        -- basic bit-manipulation extension
+    RISCV_ISA_Zbc       : boolean;                        -- carry-less multiplication instructions
     RISCV_ISA_Zbkb      : boolean;                        -- bit-manipulation instructions for cryptography
     RISCV_ISA_Zbkc      : boolean;                        -- carry-less multiplication instructions
     RISCV_ISA_Zbkx      : boolean;                        -- cryptography crossbar permutation extension
@@ -70,8 +71,10 @@ entity neorv32_cpu_wrap is
     clk_i      : in  std_ulogic;                     -- global clock, rising edge
     rstn_i     : in  std_ulogic;                     -- global reset, low-active, async
     -- status --
+    mtime_i    : in  std_ulogic_vector(63 downto 0); -- system time input from CLINT/MTIME
     trace_o    : out trace_port_t;                   -- execution trace port (enabled when CPU_TRACE_EN = true)
     sleep_o    : out std_ulogic;                     -- CPU is in sleep mode
+    fence_o    : out std_ulogic_vector(1 downto 0);  --
     -- interrupts --
     msi_i      : in  std_ulogic;                     -- RISC-V machine software interrupt
     mei_i      : in  std_ulogic;                     -- RISC-V machine external interrupt
@@ -79,11 +82,11 @@ entity neorv32_cpu_wrap is
     firq_i     : in  std_ulogic_vector(15 downto 0); -- custom fast interrupts
     dbi_i      : in  std_ulogic;                     -- RISC-V debug halt request interrupt
     -- instruction bus interface --
-    ibus_req_flat_o : out std_ulogic_vector;                      -- request bus
-    ibus_rsp_flat_i : in  std_ulogic_vector;                      -- response bus
+    ibus_req_flat_o : out std_ulogic_vector(81 downto 0);                      -- request bus
+    ibus_rsp_flat_i : in  std_ulogic_vector(33 downto 0);                      -- response bus
     -- data bus interface --
-    dbus_req_flat_o : out std_ulogic_vector;                      -- request bus
-    dbus_rsp_flat_i : in  std_ulogic_vector                       -- response bus
+    dbus_req_flat_o : out std_ulogic_vector(81 downto 0);                      -- request bus
+    dbus_rsp_flat_i : in  std_ulogic_vector(33 downto 0)                       -- response bus
   );
 end neorv32_cpu_wrap;
 
@@ -114,6 +117,7 @@ begin
     RISCV_ISA_Zalrsc    => RISCV_ISA_Zalrsc,    -- atomic reservation-set operations extension
     RISCV_ISA_Zba       => RISCV_ISA_Zba,       -- shifted-add bit-manipulation extension
     RISCV_ISA_Zbb       => RISCV_ISA_Zbb,       -- basic bit-manipulation extension
+    RISCV_ISA_Zbc       => RISCV_ISA_Zbc,       -- carry-less multiplication instructions
     RISCV_ISA_Zbkb      => RISCV_ISA_Zbkb,      -- bit-manipulation instructions for cryptography
     RISCV_ISA_Zbkc      => RISCV_ISA_Zbkc,      -- carry-less multiplication instructions
     RISCV_ISA_Zbkx      => RISCV_ISA_Zbkx,      -- cryptography crossbar permutation extension
@@ -158,8 +162,10 @@ begin
     clk_i      => clk_i,    -- global clock, rising edge
     rstn_i     => rstn_i,   -- global reset, low-active, async
     -- status --
+    mtime_i    => mtime_i,  -- system time input from CLINT/MTIME
     trace_o    => trace_o,  -- execution trace port (enabled when CPU_TRACE_EN = true)
     sleep_o    => sleep_o,  -- CPU is in sleep mode
+    fence_o    => fence_o,  --    
     -- interrupts --
     msi_i      => msi_i,    -- RISC-V machine software interrupt
     mei_i      => mei_i,    -- RISC-V machine external interrupt

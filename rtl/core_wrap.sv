@@ -255,6 +255,7 @@ generate
     localparam bit [31:0] DebugHaltAddress      = DebugAddrOffset + dm::HaltAddress[31:0];
     localparam bit [31:0] DebugExceptionAddress = DebugAddrOffset + dm::ExceptionAddress[31:0];
 
+    assign core_busy_o = 1'b0;
 
     neorv32_wrap #(
       // General
@@ -270,6 +271,7 @@ generate
       .RISCV_ISA_U                  ( 0 ), // : boolean;                        -- user mode extension
       .RISCV_ISA_Zba                ( 0 ), // : boolean;                        -- shifted-add bit-manipulation extension
       .RISCV_ISA_Zbb                ( 0 ), // : boolean;                        -- basic bit-manipulation extension
+      .RISCV_ISA_Zbc                ( 0 ), // : boolean;                        -- carry-less multiplication instructions
       .RISCV_ISA_Zbkb               ( 0 ), // : boolean;                        -- bit-manipulation instructions for cryptography
       .RISCV_ISA_Zbkc               ( 0 ), // : boolean;                        -- carry-less multiplication instructions
       .RISCV_ISA_Zbkx               ( 0 ), // : boolean;                        -- cryptography crossbar permutation extension
@@ -287,7 +289,7 @@ generate
       .RISCV_ISA_Zksed              ( 0 ), // : boolean;                        -- ShangMi hash extension
       .RISCV_ISA_Zksh               ( 0 ), // : boolean;                        -- ShangMi block cipher extension
       .RISCV_ISA_Zmmul              ( 0 ), // : boolean;                        -- multiply-only M sub-extension
-      .RISCV_ISA_Sdext              ( 0 ), // : boolean;                        -- external debug mode extension
+      .RISCV_ISA_Sdext              ( 1 ), // : boolean;                        -- external debug mode extension
       .RISCV_ISA_Sdtrig             ( 0 ), // : boolean;                        -- trigger module extension
       .RISCV_ISA_Smcntrpmf          ( 0 ), // : boolean;                        -- counter privilege-mode filtering
       .RISCV_ISA_Smpmp              ( 0 ), // : boolean;                        -- physical memory protection
@@ -297,7 +299,7 @@ generate
       .CPU_CONSTT_BR_EN             ( 0 ), // : boolean;                        -- constant-time branches
       .CPU_FAST_MUL_EN              ( 0 ), // : boolean;                        -- use DSPs for M extension's multiplier
       .CPU_FAST_SHIFT_EN            ( 0 ), // : boolean;                        -- use barrel shifter for shift operations
-      .CPU_RF_ARCH_SEL              ( 0 ), // : natural range 0 to 3;           -- register file implementation style select
+      .CPU_RF_ARCH_SEL              ( 2 ), // : natural range 0 to 3;           -- register file implementation style select
       //  Physical Memory Protection (PMP)
       .PMP_NUM_REGIONS     ( 0 ), // : natural range 0 to 16;          -- number of regions (0..16)
       .PMP_MIN_GRANULARITY ( 0 ), // : natural;                        -- minimal region granularity in bytes, has to be a power of 2, min 4 bytes
@@ -315,8 +317,10 @@ generate
       .test_enable_i,
 
       // Status
+      .mtime_i ( 64'd0 ),
       // .trace_o (),   // execution trace port (enabled when CPU_TRACE_EN = true)
       .sleep_o (),   // CPU is in sleep mode
+      .fence_o (),
 
       // Interrupts
       .msi_i ( software_irq_i ),     // RISC-V machine software interrupt

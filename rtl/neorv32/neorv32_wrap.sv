@@ -16,6 +16,7 @@ module neorv32_wrap import croc_pkg::*; #(
   // parameter bit RISCV_ISA_Zalrsc             = 0, // : boolean;                        -- atomic reservation-set operations extension
   parameter bit RISCV_ISA_Zba                = 0, // : boolean;                        -- shifted-add bit-manipulation extension
   parameter bit RISCV_ISA_Zbb                = 0, // : boolean;                        -- basic bit-manipulation extension
+  parameter bit RISCV_ISA_Zbc                = 0, // : boolean;                        -- carry-less multiplication instructions
   parameter bit RISCV_ISA_Zbkb               = 0, // : boolean;                        -- bit-manipulation instructions for cryptography
   parameter bit RISCV_ISA_Zbkc               = 0, // : boolean;                        -- carry-less multiplication instructions
   parameter bit RISCV_ISA_Zbkx               = 0, // : boolean;                        -- cryptography crossbar permutation extension
@@ -61,8 +62,10 @@ module neorv32_wrap import croc_pkg::*; #(
   input  logic test_enable_i,
 
   // Status
+  input  logic [63:0] mtime_i, // system time input from CLINT/MTIME
   // output trace_port_t trace_o,   // execution trace port (enabled when CPU_TRACE_EN = true)
   output logic        sleep_o,   // CPU is in sleep mode
+  output logic [1:0]  fence_o,
 
   // Interrupts
   input  logic         msi_i,      // RISC-V machine software interrupt
@@ -114,16 +117,16 @@ module neorv32_wrap import croc_pkg::*; #(
 //   logic [31:0] data; // read data, valid if ack = 1
 // } bus_rsp_t;
 
-logic [82:0] instr_bus_req;
+logic [81:0] instr_bus_req;
 logic [33:0] instr_bus_rsp;
 
-logic [82:0] data_bus_req;
+logic [81:0] data_bus_req;
 logic [33:0] data_bus_rsp;
 
-logic [82:0] data_xbus_req;
+logic [81:0] data_xbus_req;
 logic [33:0] data_xbus_rsp;
 
-logic [82:0] instr_xbus_req;
+logic [81:0] instr_xbus_req;
 logic [33:0] instr_xbus_rsp;
 
 logic     instr_xbus_terminate;
@@ -146,6 +149,7 @@ neorv32_cpu_wrap #(
   .RISCV_ISA_Zalrsc    ( 0                   ), // atomic reservation-set operations extension
   .RISCV_ISA_Zba       ( RISCV_ISA_Zba       ), // shifted-add bit-manipulation extension
   .RISCV_ISA_Zbb       ( RISCV_ISA_Zbb       ), // basic bit-manipulation extension
+  .RISCV_ISA_Zbc       ( RISCV_ISA_Zbc       ), // carry-less multiplication instructions
   .RISCV_ISA_Zbkb      ( RISCV_ISA_Zbkb      ), // bit-manipulation instructions for cryptography
   .RISCV_ISA_Zbkc      ( RISCV_ISA_Zbkc      ), // carry-less multiplication instructions
   .RISCV_ISA_Zbkx      ( RISCV_ISA_Zbkx      ), // cryptography crossbar permutation extension
@@ -194,8 +198,10 @@ neorv32_cpu_wrap #(
   .rstn_i (rst_ni),  // global reset, low-active, async
 
   //status
+  .mtime_i, // system time input from CLINT/MTIME
   .trace_o (), // execution trace port (enabled when CPU_TRACE_EN = true)
   .sleep_o, // CPU is in sleep mode
+  .fence_o,
 
   //interrupts
   .msi_i,  // RISC-V machine software interrupt
@@ -405,20 +411,20 @@ xbus_to_obi #() i_instr_xbus_to_obi (
 );
 
 assign data_req_o     = data_req.req;
-assign data_gnt_i     = data_rsp.gnt;
-assign data_rvalid_i  = data_rsp.rvalid;
+assign data_rsp.gnt = data_gnt_i;
+assign data_rsp.rvalid = data_rvalid_i;
 assign data_we_o      = data_req.a.we;
 assign data_be_o      = data_req.a.be;
 assign data_addr_o    = data_req.a.addr;
 assign data_wdata_o   = data_req.a.wdata;
-assign data_rdata_i   = data_rsp.r.rdata;
-assign data_err_i     = data_rsp.r.err;
+assign data_rsp.r.rdata = data_rdata_i;
+assign data_rsp.r.err = data_err_i;
 
 assign instr_req_o    = instr_req.req;
-assign instr_gnt_i    = instr_rsp.gnt;
-assign instr_rvalid_i = instr_rsp.rvalid;
+assign instr_rsp.gnt = instr_gnt_i;
+assign instr_rsp.rvalid = instr_rvalid_i;
 assign instr_addr_o   = instr_req.a.addr;
-assign instr_rdata_i  = instr_rsp.r.rdata;
-assign instr_err_i    = instr_rsp.r.err;
+assign instr_rsp.r.rdata = instr_rdata_i;
+assign instr_rsp.r.err = instr_err_i;
 
 endmodule

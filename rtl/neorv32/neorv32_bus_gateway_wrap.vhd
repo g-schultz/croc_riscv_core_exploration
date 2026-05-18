@@ -34,16 +34,16 @@ entity neorv32_bus_gateway_wrap is
     rstn_i       : in  std_ulogic; -- global reset, low-active, async
     term_o       : out std_ulogic; -- terminate current bus access
     -- host port --
-    host_req_flat_i   : in  std_ulogic_vector(82 downto 0);  -- host request
+    host_req_flat_i   : in  std_ulogic_vector(81 downto 0);  -- host request
     host_rsp_flat_o   : out std_ulogic_vector(33 downto 0);  -- host response
     -- section ports --
-    a_req_flat_o : out std_ulogic_vector(82 downto 0);
+    a_req_flat_o : out std_ulogic_vector(81 downto 0);
     a_rsp_flat_i : in  std_ulogic_vector(33 downto 0);
-    b_req_flat_o : out std_ulogic_vector(82 downto 0);
+    b_req_flat_o : out std_ulogic_vector(81 downto 0);
     b_rsp_flat_i : in  std_ulogic_vector(33 downto 0);
-    c_req_flat_o : out std_ulogic_vector(82 downto 0);
+    c_req_flat_o : out std_ulogic_vector(81 downto 0);
     c_rsp_flat_i : in  std_ulogic_vector(33 downto 0);
-    x_req_flat_o : out std_ulogic_vector(82 downto 0);
+    x_req_flat_o : out std_ulogic_vector(81 downto 0);
     x_rsp_flat_i : in  std_ulogic_vector(33 downto 0)
   );
 end neorv32_bus_gateway_wrap;
