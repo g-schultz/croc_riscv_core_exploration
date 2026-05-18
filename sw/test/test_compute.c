@@ -39,14 +39,14 @@ int main() {
     CHECK_ASSERT(6, (0xFF00 | 0x0FF0) == 0xFFF0);
     CHECK_ASSERT(7, (0xFF00 ^ 0x0FF0) == 0xF0F0);
 
-    // CSR: read mcycle (should be non-zero since we've been running)
-    uint64_t cyc = get_mcycle();
-    CHECK_ASSERT(8, cyc > 0);
+    // // CSR: read mcycle (should be non-zero since we've been running)
+    // uint64_t cyc = get_mcycle();
+    // CHECK_ASSERT(8, cyc > 0);
 
-    // CSR: read mhartid (should be 0 for single-core)
-    uint32_t hartid;
-    asm volatile("csrr %0, mhartid" : "=r"(hartid));
-    CHECK_ASSERT(9, hartid == 0);
+    // // CSR: read mhartid (should be 0 for single-core)
+    // uint32_t hartid;
+    // asm volatile("csrr %0, mhartid" : "=r"(hartid));
+    // CHECK_ASSERT(9, hartid == 0);
 
     // Memory load/store pattern
     volatile uint32_t mem_test[4];

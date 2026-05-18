@@ -16,18 +16,18 @@ packages:
     - common_verification
     - tech_cells_generic
   common_cells:
-    revision: null
-    version: null
+    revision: 9ca8a7655f741e7dd5736669a20a301325194c28
+    version: 1.39.0
     source:
-      Path: rtl/common_cells
+      Git: https://github.com/pulp-platform/common_cells.git
     dependencies:
     - common_verification
     - tech_cells_generic
   common_verification:
-    revision: null
+    revision: 5fd30c18a6be6f664d1ef9e44d04956fb4e3364e
     version: null
     source:
-      Path: rtl/common_verification
+      Git: https://github.com/pulp-platform/common_verification.git
     dependencies: []
   cv32e40p:
     revision: 9b1e50b6c6d340f6c90a56d1070c21b54f2a44f7
@@ -69,7 +69,7 @@ packages:
     - common_cells
     - obi
   neorv32:
-    revision: 20008a4d9a4ab760ea2fd76f01140de2bc231dda
+    revision: e6a04661c939f454632f99b67eaed82ed1f2493a
     version: null
     source:
       Git: https://github.com/g-schultz/neorv32.git
